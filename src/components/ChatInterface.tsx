@@ -103,9 +103,8 @@ export const ChatInterface = ({
   ): string => {
     const trimmed = response?.trim() || "";
     const recommendations = generateRecommendations(userQuestion);
-    const recText = recommendations.length
-      ? `\n\n${recommendations.join("\n")}`
-      : "";
+    const filtered = recommendations.filter((r) => !trimmed.includes(r));
+    const recText = filtered.length ? `\n\n${filtered.join("\n")}` : "";
     return `${trimmed}${recText}`;
   };
 
