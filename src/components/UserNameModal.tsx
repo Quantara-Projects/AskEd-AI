@@ -47,7 +47,7 @@ export const UserNameModal = ({ isOpen, onSave }: UserNameModalProps) => {
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-          <div className="space-y-2">
+          <div className="space-y-2 text-center">
             <Label htmlFor="name" className="text-sm font-medium">
               Please Enter Your Name:
             </Label>
@@ -56,12 +56,14 @@ export const UserNameModal = ({ isOpen, onSave }: UserNameModalProps) => {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Enter your name"
-              className="transition-all duration-200 focus:shadow-elegant text-center"
+              className="transition-all duration-200 focus:shadow-elegant"
               autoFocus
+              dir="ltr"
+              inputMode="text"
             />
           </div>
 
-          <div className="flex justify-end gap-3 pt-4">
+          <div className="flex justify-center pt-2">
             <Button
               type="submit"
               disabled={!name.trim()}
