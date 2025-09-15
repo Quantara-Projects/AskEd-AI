@@ -642,6 +642,7 @@ export const ChatInterface = ({
                 }...`}
                 className="resize-none min-h-[44px] max-h-32 pr-12"
                 disabled={isLoading}
+                dir="ltr"
               />
               <div className="absolute right-2 bottom-2 text-xs text-muted-foreground">
                 {inputMessage.length}/2000
