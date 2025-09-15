@@ -465,7 +465,7 @@ export const ChatInterface = ({
 
               <div
                 className={`max-w-[70%] group ${
-                  message.role === "user" ? "text-right self-end" : "self-start"
+                  message.role === "user" ? "self-end" : "self-start"
                 }`}
               >
                 <div
@@ -475,16 +475,10 @@ export const ChatInterface = ({
                       : "bg-chat-ai text-chat-ai-foreground"
                   }`}
                 >
-                  <div className="prose prose-sm max-w-none">
-                    {message.content.split("\n").map((line, index) =>
-                      line ? (
-                        <p key={index} className="mb-1 last:mb-0">
-                          {line}
-                        </p>
-                      ) : (
-                        <br key={index} />
-                      )
-                    )}
+                  <div className="prose prose-sm max-w-none text-left">
+                    <ReactMarkdown>
+                      {(message.content || "").replace(/<br\s*\/?>(?![^]*<\/code>)/gi, "  \n")}
+                    </ReactMarkdown>
                   </div>
                 </div>
 
