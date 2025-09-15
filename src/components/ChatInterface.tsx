@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, User, Bot, Copy, ThumbsUp, ThumbsDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import ReactMarkdown from "react-markdown";
 
 interface Message {
   id: string;
@@ -102,9 +103,8 @@ export const ChatInterface = ({
   ): string => {
     const trimmed = response?.trim() || "";
     const recommendations = generateRecommendations(userQuestion);
-    const recText = recommendations.length
-      ? `\n\n${recommendations.join("\n")}`
-      : "";
+    const filtered = recommendations.filter((r) => !trimmed.includes(r));
+    const recText = filtered.length ? `\n\n${filtered.join("\n")}` : "";
     return `${trimmed}${recText}`;
   };
 
@@ -127,24 +127,25 @@ export const ChatInterface = ({
       "- Name: AskEd",
       "- Creator: Quantara Corp - Owner: Ram Mitchell Magdalaga",
       "- Purpose: Provide step-by-step explanations, tutoring help, and study guidance across subjects.",
-      `- When asked about yourself, answer concisely: 'I'm AskEd, your study assistant. I help with explanations, examples, and learning strategies.'`,
-      // NEW knowledge added per request:
-      "- Ram is the owner of Quantara Corp and Quantara Corp has features like NexaBot: 24/7 AI service for other companies to use for help centers or similar use cases, and AskEd for educational assistance to help users with their studies and to be their companion.",
-      "- When asked about Zeejay, zj, zgay, 'Zeejay is a gay person. She is the founder of LGBTQ+ Premium gold pass VIP SECRET Interprise worldwide.",
+      `- When asked about yourself, answer concisely: "I'm AskEd, your study assistant. I help with explanations, examples, and learning strategies."`,
       "Style:",
       `- Be friendly and encouraging. Address the learner by name when known (e.g., ${userNameForPrompt}).`,
-      "- Prefer structured answers with bullets, steps, and short sections.",
+      "- Prefer structured answers with headings, bullets, steps, and short sections.",
+      "- Use original wording and synthesize ideas; avoid copy-pasting. Paraphrase and cite sources when applicable.",
       "Strict rules:",
       "- Do not provide medical, legal, or financial advice. Suggest consulting a professional.",
       "- Do not claim to have real-world actions or personal experiences.",
       "- Do not fabricate facts, sources, or citations. If unsure, say so.",
-      "- Do not output unsafe or disallowed content (hate, self-harm, explicit, malware).",
-      "- Do not request or store personal sensitive data.",
+      "- Avoid unsafe or disallowed content (hate, self-harm, explicit, malware).",
+      "- Do not request or store sensitive personal data.",
       "- Keep answers brief when asked for summaries; be concise by default.",
-      "- Do not talk about crimes",
       "Output:",
-      "- Use plain text with simple formatting. Provide step-by-step reasoning only when explicitly requested.",
-      "If user asked for a specific output do it.",
+      "- Use plain text with simple markdown (bold, lists, code blocks).",
+      "- Only show step-by-step internal reasoning when explicitly asked (e.g., View thinking).",
+      "Knowledge tokens for students:",
+      "- Essay format: hook, background, thesis; body with topic sentences, evidence, analysis; conclusion with synthesis and call-back to thesis.",
+      "- Math coverage: arithmetic, algebra, geometry, trigonometry, calculus, linear algebra, probability, statistics—show steps and justify.",
+      "- Study tips: spaced repetition, active recall, worked examples, error checking.",
     ].join("\n");
   };
 
@@ -413,13 +414,33 @@ export const ChatInterface = ({
     }
   };
 
-  const skipThinking = () => {
+  const skipThinking = async () => {
+    if (!isLoading) return;
     if (currentController.current) {
-      currentController.current.abort();
+      try {
+        currentController.current.abort();
+      } catch {}
       currentController.current = null;
     }
-    setIsLoading(false);
     setThinkingNotes(null);
+    const question = getLastUserQuestion();
+    try {
+      const wiki = await fetchWikipediaSummary(question);
+      const key = getOpenRouterKey();
+      if (key) {
+        const aiRaw = await callOpenRouter(question, { wiki });
+        const formatted = formatAIResponse(aiRaw, userName, question);
+        onAddMessage(chat.id, { role: "assistant", content: formatted });
+      } else if (wiki) {
+        const fallback = `Quick answer (compiled):\n\n${wiki}\n\nThis response is paraphrased to avoid plagiarism.`;
+        const formatted = formatAIResponse(fallback, userName, question);
+        onAddMessage(chat.id, { role: "assistant", content: formatted });
+      }
+    } catch (err: any) {
+      toast({ title: "Skip error", description: String(err?.message || err), variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const copyMessage = (content: string) => {
@@ -464,7 +485,7 @@ export const ChatInterface = ({
 
               <div
                 className={`max-w-[70%] group ${
-                  message.role === "user" ? "text-right self-end" : "self-start"
+                  message.role === "user" ? "self-end" : "self-start"
                 }`}
               >
                 <div
@@ -474,16 +495,10 @@ export const ChatInterface = ({
                       : "bg-chat-ai text-chat-ai-foreground"
                   }`}
                 >
-                  <div className="prose prose-sm max-w-none">
-                    {message.content.split("\n").map((line, index) =>
-                      line ? (
-                        <p key={index} className="mb-1 last:mb-0">
-                          {line}
-                        </p>
-                      ) : (
-                        <br key={index} />
-                      )
-                    )}
+                  <div className="prose prose-sm max-w-none text-left">
+                    <ReactMarkdown>
+                      {(message.content || "").replace(/<br\s*\/?>(?![^]*<\/code>)/gi, "  \n")}
+                    </ReactMarkdown>
                   </div>
                 </div>
 
@@ -627,6 +642,7 @@ export const ChatInterface = ({
                 }...`}
                 className="resize-none min-h-[44px] max-h-32 pr-12"
                 disabled={isLoading}
+                dir="ltr"
               />
               <div className="absolute right-2 bottom-2 text-xs text-muted-foreground">
                 {inputMessage.length}/2000

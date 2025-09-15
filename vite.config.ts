@@ -7,12 +7,16 @@ import { componentTagger } from "lovable-tagger";
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
-    port: 8080,
+    port: 5173,
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  optimizeDeps: {
+    exclude: ["react-markdown"]
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "style-to-js": path.resolve(__dirname, "./src/compat/style-to-js.js"),
     },
   },
 }));
