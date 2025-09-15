@@ -414,13 +414,33 @@ export const ChatInterface = ({
     }
   };
 
-  const skipThinking = () => {
+  const skipThinking = async () => {
+    if (!isLoading) return;
     if (currentController.current) {
-      currentController.current.abort();
+      try {
+        currentController.current.abort();
+      } catch {}
       currentController.current = null;
     }
-    setIsLoading(false);
     setThinkingNotes(null);
+    const question = getLastUserQuestion();
+    try {
+      const wiki = await fetchWikipediaSummary(question);
+      const key = getOpenRouterKey();
+      if (key) {
+        const aiRaw = await callOpenRouter(question, { wiki });
+        const formatted = formatAIResponse(aiRaw, userName, question);
+        onAddMessage(chat.id, { role: "assistant", content: formatted });
+      } else if (wiki) {
+        const fallback = `Quick answer (compiled):\n\n${wiki}\n\nThis response is paraphrased to avoid plagiarism.`;
+        const formatted = formatAIResponse(fallback, userName, question);
+        onAddMessage(chat.id, { role: "assistant", content: formatted });
+      }
+    } catch (err: any) {
+      toast({ title: "Skip error", description: String(err?.message || err), variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const copyMessage = (content: string) => {
